@@ -71,9 +71,7 @@ void img_proc::triangle_bin(Mat src, Mat hist, Mat &dst, bool grayscale) {
     threshold(triangle, dst, thresh, 255, THRESH_BINARY);
 }
 
-int img_proc::num_peaks(Mat src, float thresh) {
-    
-    
+int img_proc::num_peaks(Mat hist, float thresh) {
     float left_min = hist.at<Vec3f>(0)[0];
     float right_min = left_min;
     int left_i = 0, right_i = 0;
@@ -103,4 +101,32 @@ int img_proc::num_peaks(Mat src, float thresh) {
             }
         }
     }
+}
+
+struct cluster {
+	Vec3f center;
+	float num;
+};
+
+int img_proc::num_clusters(Mat src, int thresh) {
+	vector<cluster> clusters;
+	thresh *= thresh;
+
+	for (int i = 0; i < src.rows; i++) {
+		for (int j = 0; j < src.cols; j++) {
+			Vec3f cur = (Vec3f)src.at<Vec3b>(i, j);
+			bool new_cluster = true;
+			for (int k = 0; k < clusters.size(); k++) {
+				Vec3f center = clusters[k].center;
+				int len = (center[0] - cur[0]) * (center[0] - cur[0])
+						  + (center[1] - cur[1]) * (center[1] - cur[1])
+						  + (center[2] - cur[2]) * (center[2] - cur[2]);
+				if (len < thresh) {
+					int num = clusters[k].num;
+					clusters[k].center = center * num / (float)num + cur / )(
+					clusters[k].num += 1.0f;
+				}
+			}
+		}
+	}
 }
