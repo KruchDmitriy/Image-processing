@@ -71,6 +71,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="cluster.cpp" />
     <ClCompile Include="hist.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="resize.cpp" />

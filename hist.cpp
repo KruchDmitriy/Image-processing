@@ -3,39 +3,29 @@
 
 using namespace std;
 
-void img_proc::hist(Mat src, Mat *&dst, int kSizeSmooth, int norm_value) {
-    CV_Assert(src.type() == CV_8UC3);
+void img_proc::hist(Mat src, Mat &dst, int kSizeSmooth, int norm_value) { // TODO: Work in progress
+    CV_Assert(src.type() == CV_8U ||
+              src.type() == CV_8UC3);
 
     vector<Mat> bgr_planes;
     split(src, bgr_planes);
     
     int histSize = 256;
-
     float range[] = { 0, 256 };
     const float* histRange = { range };
 
     bool uniform = true, accumulate = false;
 
-    Mat b_hist, g_hist, r_hist;
-
-    calcHist(&bgr_planes[0], 1, 0, Mat(), b_hist, 1, &histSize, &histRange, uniform, accumulate);
-    calcHist(&bgr_planes[1], 1, 0, Mat(), g_hist, 1, &histSize, &histRange, uniform, accumulate);
-    calcHist(&bgr_planes[2], 1, 0, Mat(), r_hist, 1, &histSize, &histRange, uniform, accumulate);
+    Mat hist;
+    int channels[3] = { 1, 1, 1 };
+    calcHist(&bgr_planes[0], 1, channels, Mat(), hist, 1, &histSize, &histRange, uniform, accumulate);
 
     if (kSizeSmooth != -1) {
-        boxFilter(b_hist, b_hist, -1, Size(kSizeSmooth, kSizeSmooth));
-        boxFilter(g_hist, g_hist, -1, Size(kSizeSmooth, kSizeSmooth));
-        boxFilter(r_hist, r_hist, -1, Size(kSizeSmooth, kSizeSmooth));
+        boxFilter(hist, hist, -1, Size(1, kSizeSmooth));
     }
 
-    normalize(b_hist, b_hist, 0, norm_value, NORM_MINMAX, -1, Mat());
-    normalize(g_hist, g_hist, 0, norm_value, NORM_MINMAX, -1, Mat());
-    normalize(r_hist, r_hist, 0, norm_value, NORM_MINMAX, -1, Mat());
-
-    dst = new Mat[3];
-    dst[0] = b_hist;
-    dst[1] = g_hist;
-    dst[2] = r_hist;
+    normalize(hist, hist, 0, norm_value, NORM_MINMAX, -1, Mat());
+    hist.copyTo(dst);
 }
 
 void img_proc::triangle_bin(Mat src, Mat hist, Mat &dst, bool grayscale) {
@@ -44,15 +34,17 @@ void img_proc::triangle_bin(Mat src, Mat hist, Mat &dst, bool grayscale) {
     int minI = 256, maxI = -1;
     float minH = 1e30f, maxH = -1.0f;
     for (int i = 0; i < 127; ++i) {
-        float leftH = hist.at<float>(i);
         float rightH = hist.at<float>(255 - i);
-        if (leftH < minH && leftH > 1e-20) {
-            minH = leftH;
-            minI = i;
-        }
         if (rightH > maxH) {
             maxH = rightH;
             maxI = 255 - i;
+        }
+    }
+    for (int i = 0; i < maxI; ++i) {
+        float leftH = hist.at<float>(i);
+        if (leftH < minH && leftH > 1e-20) {
+            minH = leftH;
+            minI = i;
         }
     }
 
@@ -70,8 +62,45 @@ void img_proc::triangle_bin(Mat src, Mat hist, Mat &dst, bool grayscale) {
         }
     }
     
+    Mat triangle;
+    src.copyTo(triangle);
+
     if (grayscale == true) {
-        cvtColor(src, src, COLOR_BGR2GRAY);
+        cvtColor(triangle, triangle, COLOR_BGR2GRAY);
     }
-    threshold(src, dst, thresh, 255, THRESH_BINARY);
+    threshold(triangle, dst, thresh, 255, THRESH_BINARY);
+}
+
+int img_proc::num_peaks(Mat src, float thresh) {
+    
+    
+    float left_min = hist.at<Vec3f>(0)[0];
+    float right_min = left_min;
+    int left_i = 0, right_i = 0;
+
+    for (int i = 1, int k = 0; i < hist.rows; i++) {
+        float cur_h = hist.at<Vec3f>(i)[0];
+        if (cur_h < left_min) {
+            left_min = cur_h;
+            left_i = i;
+        }
+        else {
+            float peak = -1.0f;
+            for (int j = i + 1, float square = 0.0f; j < hist.rows; j++) {
+                square += cur_h;
+                cur_h = hist.at<Vec3f>(j)[0];
+                if (peak < cur_h) {
+                    peak = cur_h;
+                }
+                else if (right_min > cur_h) {
+                    right_min = cur_h;
+                    right_i = j;
+                }
+                else {
+                    float peak = (1.0f - (float)(left_min + right_min) / (2.0f * peak)) *
+                        (1.0f - square / ((float)(right_min - left_min) * peak));
+                }
+            }
+        }
+    }
 }

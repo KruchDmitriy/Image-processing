@@ -20,14 +20,14 @@ Mat src, dst;
     Mat *h;
     int kSizeSmooth;
     const char *win_name_hist = "hist";
-    bool grayscale = false;
+    bool grayscale = true;
     
     void sample_hist();
     void trackbar_hist(int, void*);
 #endif
 
 int main() {
-    char *filename = "E:/Images/aloe.png";
+    char *filename = "E:/Images/fish.jpg";
     src = imread(filename);
 
     namedWindow(win_name_src);

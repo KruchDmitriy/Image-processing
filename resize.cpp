@@ -14,7 +14,7 @@ static inline float L(float x) {
     return (float)(sin(M_PI * x) * sin(M_PI_2 * x) * M_1_PI * M_2_PI / (x * x));
 }
 
-void img_proc::resize(Mat src, Mat dst, Size size, int interpolation) {
+void img_proc::resize(Mat src, Mat &dst, Size size, int interpolation) {
     CV_Assert(src.type() == CV_8UC3);
     CV_Assert(interpolation >= 0 && interpolation < 3);
 
