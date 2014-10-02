@@ -3,22 +3,23 @@
 
 using namespace std;
 
-void img_proc::hist(Mat src, Mat &dst, int kSizeSmooth, int norm_value) { // TODO: Work in progress
+void img_proc::hist(Mat src, Mat &dst, int kSizeSmooth, int norm_value) {
     CV_Assert(src.type() == CV_8U ||
               src.type() == CV_8UC3);
-
+    
+    int cn = src.channels();
     vector<Mat> bgr_planes;
     split(src, bgr_planes);
     
     int histSize = 256;
+    if (cn == 3) {
+        histSize *= 256 * 256;
+    }
     float range[] = { 0, 256 };
     const float* histRange = { range };
 
-    bool uniform = true, accumulate = false;
-
-    Mat hist;
-    int channels[3] = { 1, 1, 1 };
-    calcHist(&bgr_planes[0], 1, channels, Mat(), hist, 1, &histSize, &histRange, uniform, accumulate);
+    Mat hist(1, histSize, CV_8U);
+    calcHist(&bgr_planes[0], cn, 0, Mat(), hist, 1, &histSize, &histRange, true, false);
 
     if (kSizeSmooth != -1) {
         boxFilter(hist, hist, -1, Size(1, kSizeSmooth));
@@ -28,13 +29,13 @@ void img_proc::hist(Mat src, Mat &dst, int kSizeSmooth, int norm_value) { // TOD
     hist.copyTo(dst);
 }
 
-void img_proc::triangle_bin(Mat src, Mat hist, Mat &dst, bool grayscale) {
-    CV_Assert(src.type() == CV_8UC3);
+void img_proc::triangle_bin(Mat src, Mat hist, Mat &dst) {
+    CV_Assert(src.depth() == CV_8U);
 
     int minI = 256, maxI = -1;
     float minH = 1e30f, maxH = -1.0f;
-    for (int i = 0; i < 127; ++i) {
-        float rightH = hist.at<float>(255 - i);
+    for (int i = 127; i < 255; ++i) {
+        float rightH = hist.at<float>(i);
         if (rightH > maxH) {
             maxH = rightH;
             maxI = 255 - i;
@@ -61,32 +62,27 @@ void img_proc::triangle_bin(Mat src, Mat hist, Mat &dst, bool grayscale) {
             thresh = i;
         }
     }
-    
-    Mat triangle;
-    src.copyTo(triangle);
 
-    if (grayscale == true) {
-        cvtColor(triangle, triangle, COLOR_BGR2GRAY);
-    }
-    threshold(triangle, dst, thresh, 255, THRESH_BINARY);
+    threshold(src, dst, thresh, 255, THRESH_BINARY);
 }
 
 int img_proc::num_peaks(Mat hist, float thresh) {
-    float left_min = hist.at<Vec3f>(0)[0];
-    float right_min = left_min;
+    float left_min = hist.at<uchar>(0);
+    float right_min = 255;
     int left_i = 0, right_i = 0;
 
-    for (int i = 1, int k = 0; i < hist.rows; i++) {
-        float cur_h = hist.at<Vec3f>(i)[0];
+    int k = 0;
+    for (int i = 1; i < hist.rows; i++) {
+        float cur_h = hist.at<uchar>(i);
         if (cur_h < left_min) {
             left_min = cur_h;
             left_i = i;
         }
         else {
-            float peak = -1.0f;
-            for (int j = i + 1, float square = 0.0f; j < hist.rows; j++) {
+            uchar peak = 0;
+            for (int j = i + 1, square = 0; j < hist.rows; j++) {
                 square += cur_h;
-                cur_h = hist.at<Vec3f>(j)[0];
+                cur_h = hist.at<uchar>(j);
                 if (peak < cur_h) {
                     peak = cur_h;
                 }
@@ -95,38 +91,16 @@ int img_proc::num_peaks(Mat hist, float thresh) {
                     right_i = j;
                 }
                 else {
-                    float peak = (1.0f - (float)(left_min + right_min) / (2.0f * peak)) *
+                    float measure = (1.0f - (float)(left_min + right_min) / (2.0f * peak)) *
                         (1.0f - square / ((float)(right_min - left_min) * peak));
+                    if (measure > thresh) {
+                        k++;
+                    }
+                    break;
                 }
             }
         }
     }
-}
 
-struct cluster {
-	Vec3f center;
-	float num;
-};
-
-int img_proc::num_clusters(Mat src, int thresh) {
-	vector<cluster> clusters;
-	thresh *= thresh;
-
-	for (int i = 0; i < src.rows; i++) {
-		for (int j = 0; j < src.cols; j++) {
-			Vec3f cur = (Vec3f)src.at<Vec3b>(i, j);
-			bool new_cluster = true;
-			for (int k = 0; k < clusters.size(); k++) {
-				Vec3f center = clusters[k].center;
-				int len = (center[0] - cur[0]) * (center[0] - cur[0])
-						  + (center[1] - cur[1]) * (center[1] - cur[1])
-						  + (center[2] - cur[2]) * (center[2] - cur[2]);
-				if (len < thresh) {
-					int num = clusters[k].num;
-					clusters[k].center = center * num / (float)num + cur / )(
-					clusters[k].num += 1.0f;
-				}
-			}
-		}
-	}
+    return k;
 }

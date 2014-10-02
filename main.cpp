@@ -17,7 +17,7 @@ Mat src, dst;
     void trackbar_resize(int, void*);
 #endif
 #ifdef HIST
-    Mat *h;
+    Mat h;
     int kSizeSmooth;
     const char *win_name_hist = "hist";
     bool grayscale = true;
@@ -28,7 +28,7 @@ Mat src, dst;
 
 int main() {
     char *filename = "E:/Images/fish.jpg";
-    src = imread(filename);
+    src = imread(filename, 0);
 
     namedWindow(win_name_src);
 
@@ -71,20 +71,21 @@ int main() {
         int hist_h = 512;
         for (int i = 1; i < 256; i++)
         {
-            line(sumHist, Point(2 * (i - 1), hist_h - cvRound(h[0].at<float>(i - 1))),
-                Point(2 * i, hist_h - cvRound(h[0].at<float>(i))),
-                Scalar(255, 0, 0), 2, 8, 0);
-            line(sumHist, Point(2 * (i - 1), hist_h - cvRound(h[1].at<float>(i - 1))),
-                Point(2 * i, hist_h - cvRound(h[1].at<float>(i))),
-                Scalar(0, 255, 0), 2, 8, 0);
-            line(sumHist, Point(2 * (i - 1), hist_h - cvRound(h[2].at<float>(i - 1))),
-                Point(2 * i, hist_h - cvRound(h[2].at<float>(i))),
-                Scalar(0, 0, 255), 2, 8, 0);
+            line(sumHist, Point(2 * (i - 1), hist_h - cvRound(h.at<float>(i - 1))),
+                Point(2 * i, hist_h - cvRound(h.at<float>(i))),
+                Scalar(255, 255, 255), 2, 8, 0);
         }
         imshow(win_name_hist, sumHist);
 
-        Mat gray_hist = 0.0722f * h[0] + 0.7152f * h[1] + 0.2126 * h[2];
-        triangle_bin(src, gray_hist, dst, grayscale);
+        Mat gray_hist;
+        if (h.channels() == 3) {
+            cvtColor(h, gray_hist, COLOR_BGR2GRAY);
+        }
+        else {
+            h.copyTo(gray_hist);
+        }
+
+        triangle_bin(src, gray_hist, dst);
         imshow(win_name_dst, dst);
     }
 #endif
