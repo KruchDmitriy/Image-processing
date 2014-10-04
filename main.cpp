@@ -1,6 +1,6 @@
 #include "img_proc.h"
 
-#define HIST
+#define CLUST
 
 using namespace img_proc;
 
@@ -13,8 +13,7 @@ Mat src, dst;
     int new_w, new_h;
     int inter = INT_NONLINEAR;
 
-    void sample_resize();
-    void trackbar_resize(int, void*);
+    void trackbar_resize(int, void*); 
 #endif
 #ifdef HIST
     Mat h;
@@ -22,23 +21,26 @@ Mat src, dst;
     const char *win_name_hist = "hist";
     bool grayscale = true;
     
-    void sample_hist();
     void trackbar_hist(int, void*);
 #endif
+#ifdef CLUST
+    Mat clust;
+    const char *win_name_clust = "k-means";
+    float delta = 1000.0f;
+    float thresh = 5e-2;
+    float accuracy = 1e5;
+#endif
+
+void sample();
 
 int main() {
     char *filename = "E:/Images/fish.jpg";
-    src = imread(filename, 0);
+    src = imread(filename, IMREAD_COLOR);
 
     namedWindow(win_name_src);
-
-#ifdef RESIZE
-    sample_resize();
-#endif
-#ifdef HIST
-    sample_hist();
-#endif
     imshow(win_name_src, src);
+
+    sample();
 
     waitKey();
     destroyAllWindows();
@@ -46,7 +48,7 @@ int main() {
 }
 
 #ifdef RESIZE
-    void sample_resize() {
+    void sample() {
         new_w = src.cols / 2;
         new_h = src.rows / 2;
 
@@ -59,7 +61,7 @@ int main() {
     }
 #endif
 #ifdef HIST
-    void sample_hist() {
+    void sample() {
         kSizeSmooth = 1;
 
         createTrackbar("kernel size", win_name_src, &kSizeSmooth, 5, trackbar_hist);
@@ -87,5 +89,22 @@ int main() {
 
         triangle_bin(src, gray_hist, dst);
         imshow(win_name_dst, dst);
+    }
+#endif
+#ifdef CLUST
+    void sample() {
+        int k = num_clusters(src, delta, thresh);
+        Mat center;
+        kmeans(src, dst, k, accuracy, center);
+        
+        clust.create(src.size(), src.type());
+        Vec3b *c_ptr = (Vec3b *)center.data;
+        for (int i = 0; i < dst.rows; i++) {
+            for (int j = 0; j < dst.cols; j++) {
+                clust.at<Vec3b>(i, j) = c_ptr[dst.at<uchar>(i, j)];
+            }
+        }
+
+        imshow(win_name_clust, clust);
     }
 #endif
