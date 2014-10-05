@@ -67,9 +67,9 @@ void img_proc::kmeans(Mat src, Mat &dst, int num_cl, double accuracy, OutputArra
     Mat cluster(src.size(), CV_8U);
     int accrc;
     do {
-        for (int i = 0; i < src.rows; ++i) {
-            for (int j = 0; j < src.cols; ++j) {
-                uchar *cur_vec = (uchar *)(src.ptr(i) + j);
+        for (int i = 0; i < src.rows; i++) {
+            for (int j = 0; j < src.cols; j++) {
+                uchar *cur_vec = (uchar *)(src.ptr(i) + j * dim);
                 int min_i, min_dist = INT_MAX;
                 for (int k = 0; k < num_cl * dim; k += dim) {
                     int dist;
@@ -95,28 +95,28 @@ void img_proc::kmeans(Mat src, Mat &dst, int num_cl, double accuracy, OutputArra
         memset(mean, 0, sizeof(float) * num_cl * dim);
         memset(quantity, 0, sizeof(int) * num_cl);
 
-        for (int i = 0; i < src.rows; ++i) {
-            for (int j = 0; j < src.cols; ++j) {
+        for (int i = 0; i < src.rows; i++) {
+            for (int j = 0; j < src.cols; j++) {
                 int k = cluster.at<uchar>(i, j);
-                char *cur_vec = (char *)(src.ptr(i) + j);
+                uchar *cur_vec = (uchar *)(src.ptr(i) + j * dim);
 
-                for (int z = 0; z < dim; ++z) {
-                    mean[k + z] += cur_vec[z];
+                for (int z = 0; z < dim; z++) {
+                    mean[k + z] += (float)(cur_vec[z]);
                 }
-                quantity[k]++;
+                quantity[k] += 1;
             }
         }
 
         for (int k = 0; k < num_cl * dim; k++) {
-            mean[k] /= (float)quantity[k / dim];
-            clust[k] = (int)(mean[k] + 0.5f);
+            mean[k] /= (float)(quantity[k / dim]);
+            clust[k] = cvRound(mean[k]);
         }
 
         accrc = 0;
         for (int i = 0; i < src.rows; ++i) {
             for (int j = 0; j < src.cols; ++j) {
                 int k = cluster.at<uchar>(i, j);
-                char *cur_vec = (char *)(src.ptr(i) + j);
+                uchar *cur_vec = (uchar *)(src.ptr(i) + j * dim);
 
                 for (int z = 0; z < dim; ++z) {
                     accrc += (clust[k + z] - cur_vec[z]) * (clust[k + z] - cur_vec[z]);
@@ -128,7 +128,7 @@ void img_proc::kmeans(Mat src, Mat &dst, int num_cl, double accuracy, OutputArra
 
     cluster.copyTo(dst);
 
-    if (center.empty()) {
+    if (center.needed()) {
         center.create(Size(1, num_cl), src.type());
         Mat _center = center.getMat();
         uchar* c_ptr = _center.data;
