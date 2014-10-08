@@ -1,5 +1,6 @@
 #include "img_proc.h"
 #include <stdlib.h>
+#include <math.h>
 
 using namespace std;
 
@@ -136,4 +137,72 @@ void img_proc::kmeans(Mat src, Mat &dst, int num_cl, double accuracy, OutputArra
             c_ptr[i] = clust[i];
         }
     }
+}
+
+/********************** Characteristic of segmented areas ********************/
+
+void img_proc::moment(Mat src, int num_cl, int *&result, int x, int y, int *x_0, int *y_0) {
+    CV_Assert(src.type() == CV_8U);
+    CV_Assert(num_cl < 0 || x < 0 || y < 0);
+
+    int *m = new int[num_cl];
+    memset(m, 0, sizeof(int)* num_cl);
+    if (x_0 == NULL) {
+        x_0 = new int[num_cl];
+        memset(x_0, 0, sizeof(int)* num_cl);
+    }
+    if (y_0 == NULL) {
+        y_0 = new int[num_cl];
+        memset(y_0, 0, sizeof(int)* num_cl);
+    }
+
+    uchar *src_ptr = src.data;
+    int step = src.step;
+    for (int i = 0; i < src.rows; i++) {
+        for (int j = 0; j < src.cols; j++) {
+            int k = src_ptr[i * step + j];
+            m[k] += _Pow_int(i - x_0[k], x) * _Pow_int(j - y_0[k], y);
+        }
+    }
+
+    result = m;
+}
+
+void img_proc::perimeter(Mat src, int num_cl, int *&result) {
+    CV_Assert(src.type() == CV_8U);
+
+    int *m = new int[num_cl];
+    memset(m, 0, sizeof(int)* num_cl);
+
+    uchar *src_ptr = src.data;
+    int step = src.step;
+    for (int i = 0; i < src.rows; i++) {
+        m[src_ptr[i * step]] += 1;
+        m[src_ptr[i * step + src.cols - 1]] += 1;
+    }
+    for (int j = 0; j < src.cols; j++) {
+        m[src_ptr[j]]++;
+        m[src_ptr[src.rows - 1 + j]]++;
+    }
+    for (int i = 0; i < src.rows - 1; i++) {
+        for (int j = 0; j < src.cols - 1; j++) {
+            int k = src_ptr[i * step + j];
+            int k_right = src_ptr[i * step + j + 1];
+            int k_down = src_ptr[(i + 1) * step + j];
+            if (k != k_right) {
+                m[k]++;
+                m[k_right]++;
+            }
+            if (k != k_down) {
+                m[k]++;
+                m[k_down]++;
+            }
+            if (j == 0) {
+                m[k]++;
+                m[src_ptr[i * step + src.cols - 1]]++;
+            }
+        }
+    }
+
+    result = m;
 }

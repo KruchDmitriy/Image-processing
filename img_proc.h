@@ -18,4 +18,6 @@ namespace img_proc {
     int num_peaks(Mat hist, float thresh = 0.5f);
     int num_clusters(Mat src, float delta, float thresh);
     void kmeans(Mat src, Mat &dst, int num_cl, double accuracy, OutputArray center = noArray());
+    void moment(Mat src, int num_cl, int *&result, int x, int y, int *x_0 = NULL, int *y_0 = NULL);
+    void perimeter(Mat src, int num_cl, int *&result);
 }
