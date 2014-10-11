@@ -1,5 +1,4 @@
 #include "img_proc.h"
-#include <math.h>
 
 #define clamp(a, low, high) min(max(a, low), high)
 

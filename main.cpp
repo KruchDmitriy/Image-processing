@@ -3,6 +3,7 @@
 #define CLUST
 
 using namespace img_proc;
+using namespace std;
 
 const char *win_name_src = "src";
 const char *win_name_dst = "dst";
@@ -106,5 +107,61 @@ int main() {
         }
 
         imshow(win_name_clust, clust);
+
+        /* 
+        Now lets calc:
+            1. Square.
+            2. Perimeter.
+            3. Compact.
+            4. Center of graity
+            5. Orientation main axe momentum
+        */
+
+        int *S, *P;
+        moment(dst, k, S, 0, 0);
+        perimeter(dst, k, P);
+
+        int *m01, *m10, *m11, *m20, *m02;
+        moment(dst, k, m01, 0, 1);
+        moment(dst, k, m10, 1, 0);
+        moment(dst, k, m11, 1, 1);
+        moment(dst, k, m20, 2, 0);
+        moment(dst, k, m02, 0, 2);
+
+        float *C = new float[k];
+        float *Xc = new float[k], 
+            *Yc = new float[k];
+        float *O = new float[k];
+
+        for (int i = 0; i < k; i++) {
+            C[i] = (float)P[i] * P[i] / S[i];
+            Xc[i] = (float)m01[i] / S[i];
+            Yc[i] = (float)m10[i] / S[i];
+            O[i] = 0.5f * atan(2.0f * m11[i] / (m20[i] - m02[i]));
+        }
+        
+        FILE *f;
+        f = fopen("output.txt", "w");
+        fprintf(f, "Square: \n");
+        for (int i = 0; i < k; i++) {
+            fprintf(f, "%d %d\n", i, S[i]);
+        }
+        fprintf(f, "\nPerimeter: \n");
+        for (int i = 0; i < k; i++) {
+            fprintf(f, "%d %d\n", i, P[i]);
+        }
+        fprintf(f, "\nCompact: \n");
+        for (int i = 0; i < k; i++) {
+            fprintf(f, "%d %f\n", i, C[i]);
+        }
+        fprintf(f, "\nCenter of gravity: \n");
+        for (int i = 0; i < k; i++) {
+            fprintf(f, "%d (%f, %f)\n", i, Xc[i], Yc[i]);
+        }
+        fprintf(f, "\nOrientation main axe momentum: \n");
+        for (int i = 0; i < k; i++) {
+            fprintf(f, "%d %f (rad)\n", i, O[i]);
+        }
+        fclose(f);
     }
 #endif

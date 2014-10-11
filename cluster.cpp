@@ -1,6 +1,4 @@
 #include "img_proc.h"
-#include <stdlib.h>
-#include <math.h>
 
 using namespace std;
 
@@ -143,7 +141,7 @@ void img_proc::kmeans(Mat src, Mat &dst, int num_cl, double accuracy, OutputArra
 
 void img_proc::moment(Mat src, int num_cl, int *&result, int x, int y, int *x_0, int *y_0) {
     CV_Assert(src.type() == CV_8U);
-    CV_Assert(num_cl < 0 || x < 0 || y < 0);
+    CV_Assert(num_cl > 0 || x >= 0 || y >= 0);
 
     int *m = new int[num_cl];
     memset(m, 0, sizeof(int)* num_cl);
@@ -170,6 +168,7 @@ void img_proc::moment(Mat src, int num_cl, int *&result, int x, int y, int *x_0,
 
 void img_proc::perimeter(Mat src, int num_cl, int *&result) {
     CV_Assert(src.type() == CV_8U);
+    CV_Assert(num_cl > 0);
 
     int *m = new int[num_cl];
     memset(m, 0, sizeof(int)* num_cl);

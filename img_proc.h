@@ -2,6 +2,9 @@
 #include <opencv2\imgcodecs.hpp>
 #include <opencv2\imgproc.hpp>
 
+#include <stdlib.h>
+#include <math.h>
+
 using namespace cv;
 
 namespace img_proc {
